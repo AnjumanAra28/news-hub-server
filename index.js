@@ -27,10 +27,11 @@ async function run() {
 
    const articleCollection = client.db('newsDB').collection('articles')
    const publisherCollection = client.db('newsDB').collection('publisher')
+   const userCollection = client.db('newsDB').collection('users')
    
     //  get article post
     app.get('/articles',async(req,res)=>{
-       const result = await articleCollection.find().sort({ views: -1 }) .toArray()
+       const result = await articleCollection.find().sort({ views: -1 }).limit(6).toArray()
        res.send(result)
     })
 
@@ -46,6 +47,20 @@ async function run() {
       const result = await publisherCollection.find().toArray()
       res.send(result)
    })
+
+  //  user api
+  app.post('/users', async (req, res) => {
+    const user = req.body;
+    
+    const query = { email: user.email }
+    const existingUser = await userCollection.findOne(query);
+
+    if (existingUser) {
+      return res.send({ message: 'user already exists', insertedId: null })
+    }
+    const result = await userCollection.insertOne(user);
+    res.send(result);
+  });
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
@@ -64,12 +79,11 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("boss is sitting");
+  res.send("news is running");
 });
 
 app.listen(port, () => {
-  console.log(`Bistro boss is sitting on port ${port}`);
+  console.log(`news hub is running on port ${port}`);
 });
 
-// newsOwner
-// iXlZJgDTT9gwxACT
+
