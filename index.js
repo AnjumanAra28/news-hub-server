@@ -43,6 +43,69 @@ async function run() {
       res.send(result);
     });
 
+    // get all articles
+    app.get("/allArticles", async (req, res) => {
+      const { search, publisher, tag } = req.query;
+
+      let filter = { status: "approved" };
+
+      if (search) filter.title = { $regex: search, $options: "i" };
+      if (publisher) filter.publisher = publisher;
+      if (tag) filter.tags = tag;
+
+      const result = await articleCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    // update article status
+    app.patch('/allArticles/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: 'approved'
+        }
+      }
+      const result = await articleCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
+
+    // update article decline reason
+    app.patch('/allArticles/:id/decline', async (req, res) => {
+      const id = req.params.id;
+      const reason = req.body;  
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: 'declined',
+          declineReason:reason,
+        }
+      }
+      const result = await articleCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
+
+    // update article to premium
+    app.patch('/allArticles/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          isPremium: true
+        }
+      }
+      const result = await articleCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
+
+    // delete article
+    app.delete('/allArticles/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await articleCollection.deleteOne(query);
+      res.send(result);
+    })
+
     //  get publisher
     app.get("/publisher", async (req, res) => {
       const result = await publisherCollection.find().toArray();
