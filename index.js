@@ -43,7 +43,7 @@ async function run() {
       res.send(result);
     });
 
-    // get all articles
+    // get all approved articles
     app.get("/allArticles", async (req, res) => {
       const { search, publisher, tag } = req.query;
 
@@ -57,54 +57,82 @@ async function run() {
       res.send(result);
     });
 
+    // get articleDetails
+    app.get("/articleDetails/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await articleCollection.findOne(filter);
+      res.send(result);
+    });
+
+    // api for view count increase
+    app.patch('/allArticles/:id/views', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+          $inc: { views: 1 }
+      };
+      const result = await articleCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+  });
+  
+
+    // get all articles on admin route
+    app.get("/allArticles/admin", async (req, res) => {
+      const result = await articleCollection.find().toArray();
+      res.send(result);
+    });
+
+
+
     // update article status
-    app.patch('/allArticles/:id', async (req, res) => {
+    app.patch("/allArticles/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
-          status: 'approved'
-        }
-      }
+          status: "approved",
+        },
+      };
       const result = await articleCollection.updateOne(filter, updatedDoc);
       res.send(result);
-    })
+    });
 
     // update article decline reason
-    app.patch('/allArticles/:id/decline', async (req, res) => {
+    app.patch("/allArticles/:id/decline", async (req, res) => {
       const id = req.params.id;
-      const reason = req.body;  
+      const { reason } = req.body;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
-          status: 'declined',
-          declineReason:reason,
-        }
-      }
+          status: "declined",
+          declineReason: reason,
+        },
+      };
       const result = await articleCollection.updateOne(filter, updatedDoc);
       res.send(result);
-    })
+    });
 
     // update article to premium
-    app.patch('/allArticles/:id', async (req, res) => {
+    app.patch("/allArticles/:id/premium", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
-          isPremium: true
-        }
-      }
+          isPremium: true,
+        },
+      };
       const result = await articleCollection.updateOne(filter, updatedDoc);
       res.send(result);
-    })
+    });
 
     // delete article
-    app.delete('/allArticles/:id', async (req, res) => {
+    app.delete("/allArticles/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
+      const query = { _id: new ObjectId(id) };
       const result = await articleCollection.deleteOne(query);
       res.send(result);
-    })
+    });
 
     //  get publisher
     app.get("/publisher", async (req, res) => {
