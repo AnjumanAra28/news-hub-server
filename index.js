@@ -77,6 +77,12 @@ async function run() {
   });
   
 
+  // get premium articles
+  app.get("/premiumArticles", async (req, res) => {
+    const result = await articleCollection.find({ isPremium: true }).toArray();
+    res.send(result);
+});
+
     // get all articles on admin route
     app.get("/allArticles/admin", async (req, res) => {
       const result = await articleCollection.find().toArray();
@@ -133,6 +139,20 @@ async function run() {
       const result = await articleCollection.deleteOne(query);
       res.send(result);
     });
+
+    // update user profile
+    app.patch("/updateProfile/:id", async (req, res) => {
+      const userId = req.params.id;
+      const updatedInfo = req.body;
+      
+      const filter = { _id: new ObjectId(userId) };
+      const updateDoc = { $set: updatedInfo };
+      
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+  });
+  
+
 
     //  get publisher
     app.get("/publisher", async (req, res) => {
