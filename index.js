@@ -66,30 +66,29 @@ async function run() {
     });
 
     // api for view count increase
-    app.patch('/allArticles/:id/views', async (req, res) => {
+    app.patch("/allArticles/:id/views", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
-          $inc: { views: 1 }
+        $inc: { views: 1 },
       };
       const result = await articleCollection.updateOne(filter, updatedDoc);
       res.send(result);
-  });
-  
+    });
 
-  // get premium articles
-  app.get("/premiumArticles", async (req, res) => {
-    const result = await articleCollection.find({ isPremium: true }).toArray();
-    res.send(result);
-});
+    // get premium articles
+    app.get("/premiumArticles", async (req, res) => {
+      const result = await articleCollection
+        .find({ isPremium: true })
+        .toArray();
+      res.send(result);
+    });
 
     // get all articles on admin route
     app.get("/allArticles/admin", async (req, res) => {
       const result = await articleCollection.find().toArray();
       res.send(result);
     });
-
-
 
     // update article status
     app.patch("/allArticles/:id", async (req, res) => {
@@ -140,19 +139,39 @@ async function run() {
       res.send(result);
     });
 
-    // update user profile
-    app.patch("/updateProfile/:id", async (req, res) => {
-      const userId = req.params.id;
-      const updatedInfo = req.body;
-      
-      const filter = { _id: new ObjectId(userId) };
-      const updateDoc = { $set: updatedInfo };
-      
-      const result = await userCollection.updateOne(filter, updateDoc);
+    // get logged in user for updating data
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await userCollection.findOne(query);
       res.send(result);
-  });
-  
+    });
 
+    // update user profile
+    //   app.patch("/updateProfile/:email", async (req, res) => {
+    //     const email = req.params.email;
+    //     const updatedInfo = req.body;
+
+    //     const filter = { email: email };
+    //     const updateDoc = { $set: updatedInfo };
+
+    //     const result = await userCollection.updateOne(filter, updateDoc);
+    //     res.send(result);
+    // });
+
+    app.put("/updateUser/:email", async (req, res) => {
+      const email = req.params.email;
+      const { name, photo } = req.body;
+
+      console.log(photo);
+      const query = { email: email };
+      const updateDoc = {
+        $set: { name: name, photo: photo }, 
+      };
+
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     //  get publisher
     app.get("/publisher", async (req, res) => {
