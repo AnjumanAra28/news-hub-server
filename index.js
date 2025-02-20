@@ -245,6 +245,53 @@ async function run() {
       res.send({ admin });
     });
 
+    // subscription api
+    app.put("/premiumUser/:email", async (req, res) => {
+      const { selectedDuration } = req.body; // Updated variable name
+      const email = req.params.email;
+  
+      const filter = { email: email };
+      let expiryDate = new Date();
+  
+      if (selectedDuration === "1 minute") {
+          expiryDate.setMinutes(expiryDate.getMinutes() + 1);
+      } else if (selectedDuration === "5 days") {
+          expiryDate.setDate(expiryDate.getDate() + 5);
+      } else if (selectedDuration === "10 days") {
+          expiryDate.setDate(expiryDate.getDate() + 10);
+      }
+  
+      const updateDoc = {
+          $set: { premiumTaken: expiryDate },
+      };
+  
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+  });
+  
+ 
+  // check a user is premium
+  app.get("/checkPremium/:email", async (req, res) => {
+    const email = req.params.email;
+    const user = await userCollection.findOne({ email });
+
+    if (user?.premiumTaken) {
+        const currentTime = new Date();
+        const premiumExpiry = new Date(user.premiumTaken);
+
+        if (currentTime > premiumExpiry) {
+            // Premium has expired, reset to null
+            await userCollection.updateOne({ email }, { $set: { premiumTaken: null } });
+            return res.send({ premium: false });
+        } else {
+            return res.send({ premium: true });
+        }
+    }
+    res.send({ premium: false });
+});
+
+  
+
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
