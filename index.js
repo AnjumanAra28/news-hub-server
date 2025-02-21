@@ -166,7 +166,7 @@ async function run() {
       console.log(photo);
       const query = { email: email };
       const updateDoc = {
-        $set: { name: name, photo: photo }, 
+        $set: { name: name, photo: photo },
       };
 
       const result = await userCollection.updateOne(query, updateDoc);
@@ -245,52 +245,71 @@ async function run() {
       res.send({ admin });
     });
 
+    // user statistics
+    app.get("/user-stats", async (req, res) => {
+      try {
+        const totalUsers = await userCollection.countDocuments();
+        const premiumUsers = await userCollection.countDocuments({
+          premiumTaken: { $ne: null },
+        }); // Users with a premium subscription
+        const normalUsers = totalUsers - premiumUsers; // Remaining are normal users
+
+        res.send({
+          totalUsers,
+          normalUsers,
+          premiumUsers,
+        });
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch statistics" });
+      }
+    });
+
     // subscription api
     app.put("/premiumUser/:email", async (req, res) => {
       const { selectedDuration } = req.body; // Updated variable name
       const email = req.params.email;
-  
+
       const filter = { email: email };
       let expiryDate = new Date();
-  
+
       if (selectedDuration === "1 minute") {
-          expiryDate.setMinutes(expiryDate.getMinutes() + 1);
+        expiryDate.setMinutes(expiryDate.getMinutes() + 1);
       } else if (selectedDuration === "5 days") {
-          expiryDate.setDate(expiryDate.getDate() + 5);
+        expiryDate.setDate(expiryDate.getDate() + 5);
       } else if (selectedDuration === "10 days") {
-          expiryDate.setDate(expiryDate.getDate() + 10);
+        expiryDate.setDate(expiryDate.getDate() + 10);
       }
-  
+
       const updateDoc = {
-          $set: { premiumTaken: expiryDate },
+        $set: { premiumTaken: expiryDate },
       };
-  
+
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
-  });
-  
- 
-  // check a user is premium
-  app.get("/checkPremium/:email", async (req, res) => {
-    const email = req.params.email;
-    const user = await userCollection.findOne({ email });
+    });
 
-    if (user?.premiumTaken) {
+    // check a user is premium
+    app.get("/checkPremium/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email });
+
+      if (user?.premiumTaken) {
         const currentTime = new Date();
         const premiumExpiry = new Date(user.premiumTaken);
 
         if (currentTime > premiumExpiry) {
-            // Premium has expired, reset to null
-            await userCollection.updateOne({ email }, { $set: { premiumTaken: null } });
-            return res.send({ premium: false });
+          // Premium has expired, reset to null
+          await userCollection.updateOne(
+            { email },
+            { $set: { premiumTaken: null } }
+          );
+          return res.send({ premium: false });
         } else {
-            return res.send({ premium: true });
+          return res.send({ premium: true });
         }
-    }
-    res.send({ premium: false });
-});
-
-  
+      }
+      res.send({ premium: false });
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
