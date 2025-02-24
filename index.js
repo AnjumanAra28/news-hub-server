@@ -26,6 +26,8 @@ async function run() {
     const articleCollection = client.db("newsDB").collection("articles");
     const publisherCollection = client.db("newsDB").collection("publisher");
     const userCollection = client.db("newsDB").collection("users");
+    const reviewCollection = client.db("newsDB").collection("reviews");
+    const faqCollection = client.db("newsDB").collection("faqs");
 
     // jwt related api
     // app.post("/jwt", async (req, res) => {
@@ -96,6 +98,18 @@ async function run() {
       const result = await articleCollection.insertOne(article);
       res.send(result);
     });
+
+    // get reviews on homepage
+    app.get('/reviews', async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    })
+
+    // get faqs on homepage
+    app.get('/faqs', async (req, res) => {
+      const result = await faqCollection.find().toArray();
+      res.send(result);
+    })
 
     // get all approved articles
     app.get("/allArticles", async (req, res) => {
