@@ -30,62 +30,58 @@ async function run() {
     const faqCollection = client.db("newsDB").collection("faqs");
 
     // jwt related api
-    // app.post("/jwt", async (req, res) => {
-    //   const user = req.body;
-    //   const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-    //     expiresIn: "23h",
-    //   });
-    //   res.send({ token });
-    //   console.log(token);
-    // });
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "23h",
+      });
+      res.send({ token });
+    });
 
-    // // // middlewares
-    // const verifyToken = (req, res, next) => {
-    //   if (!req.headers.authorization) {
-    //     return res.status(401).send({ message: "unauthorized access" });
-    //   }
-    //   const token = req.headers.authorization.split(" ")[1];
-    //   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    //     if (err) {
-    //       return res.status(401).send({ message: "unauthorized access" });
-    //     }
-    //     req.decoded = decoded;
-    //     next();
-    //   });
-    // };
+    // middlewares
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
 
-    // //  verifyToken
-    // const verifyAdmin = async (req, res, next) => {
-    //   const email = req.decoded.email;
-    //   const query = { email: email };
-    //   const user = await userCollection.findOne(query);
-    //   const isAdmin = user?.role === "admin";
-    //   if (!isAdmin) {
-    //     return res.status(403).send({ message: "forbidden access" });
-    //   }
-    //   next();
-    // };
+    //  verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     // check user is admin or not
-    // app.get(
-    //   "/users/admin/:email",
+    app.get("/users/admin/:email", verifyToken,  async (req, res) => {
+        const email = req.params.email;
 
-    //   async (req, res) => {
-    //     const email = req.params.email;
+        if (email !== req.decoded.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
 
-    //     if (email !== req.decoded.email) {
-    //       return res.status(403).send({ message: "forbidden access" });
-    //     }
-
-    //     const query = { email: email };
-    //     const user = await userCollection.findOne(query);
-    //     let admin = false;
-    //     if (user) {
-    //       admin = user?.role === "admin";
-    //     }
-    //     res.send({ admin });
-    //   }
-    // );
+        const query = { email: email };
+        const user = await userCollection.findOne(query);
+        let admin = false;
+        if (user) {
+          admin = user?.role === "admin";
+        }
+        res.send({ admin });
+      }
+    );
 
     //  get article
     app.get("/articles", async (req, res) => {
@@ -121,12 +117,10 @@ async function run() {
         });
 
         if (existingArticles > 0) {
-          return res
-            .status(403)
-            .json({
-              message:
-                "Normal users can only post one article. Upgrade to premium!",
-            });
+          return res.status(403).json({
+            message:
+              "Normal users can only post one article. Upgrade to premium!",
+          });
         }
       }
 
@@ -134,7 +128,7 @@ async function run() {
       res.send(result);
     });
 
-    // get all approved articles
+    // get all approved articles (public route)
     app.get("/allArticles", async (req, res) => {
       const { search, publisher, tag } = req.query;
 
@@ -168,8 +162,8 @@ async function run() {
     });
 
     // premium page article apis
-    // get premium articles
-    app.get("/premiumArticles", async (req, res) => {
+    // get premium articles (private route)
+    app.get("/premiumArticles", verifyToken, async (req, res) => {
       const result = await articleCollection
         .find({ isPremium: true })
         .toArray();
@@ -177,8 +171,8 @@ async function run() {
     });
 
     // my article page apis
-    // get my article
-    app.get("/myArticles/:email", async (req, res) => {
+    // get my article  (private route)
+    app.get("/myArticles/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
       const filter = { authorEmail: email };
@@ -188,23 +182,23 @@ async function run() {
     });
 
     // delete from my article
-    app.delete("/myArticles/:id", async (req, res) => {
+    app.delete("/myArticles/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await articleCollection.deleteOne(query);
       res.send(result);
     });
 
-    // get data for updating
-    app.get("/myArticles/:id", async (req, res) => {
+    // get data for updating - to do
+    app.get("/myArticles/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await articleCollection.findOne(query);
       res.send(result);
     });
 
-    // update my article
-    app.put("/updateMyArticle/:id", async (req, res) => {
+    // update my article - to do
+    app.put("/updateMyArticle/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const updatedArticle = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -222,66 +216,50 @@ async function run() {
 
     // dashboard apis
     // get all articles on admin route
-    app.get(
-      "/allArticles/admin/pieCharts",
-      async (req, res) => {
-        const result = await articleCollection.find().toArray();
-        res.send(result);
-      }
-    );
-
-    app.get("/allArticles/admin", async (req, res) => {
-      console.log(req.query);
-      try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-    
-        if (page <= 0 || limit <= 0) {
-          return res.status(400).json({ message: "Invalid page or limit" });
-        }
-    
-        const skip = (page -1) * limit;
-    
-        const result = await articleCollection
-          .find()
-          .skip(skip)
-          .limit(limit)
-          .toArray();
-    
-        const totalArticles = await articleCollection.countDocuments();
-    
-        res.send({
-          articles: result,
-          totalArticles,
-        });
-      } catch (error) {
-        console.error("Error fetching articles:", error);
-        res.status(500).json({ message: "Internal Server Error", error: error.message });
-      }
-    });
-    
-
-    
-
-    app.patch("/allArticles/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          status: "approved",
-        },
-      };
-      const result = await articleCollection.updateOne(filter, updatedDoc);
-
-      if (result.modifiedCount > 0) {
-        res.status(200).json({ message: "Article status updated to approved" });
-      } else {
-        res.status(400).json({ message: "Failed to update article status" });
-      }
+    app.get("/allArticles/admin/pieCharts",  async (req, res) => {
+      const result = await articleCollection.find().toArray();
+      res.send(result);
     });
 
-    // update article status to approve
-    app.patch("/allArticles/:id", async (req, res) => {
+    app.get("/allArticles/admin", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await articleCollection.find().toArray();
+      res.send(result);
+      console.log(result);
+    });
+
+    // GET ALL article pagination admin route - todo 
+    // app.get("/allArticles/admin", verifyToken, verifyAdmin, async (req, res) => {
+    //   try {
+    //     const page = parseInt(req.query.page) || 1;
+    //     const limit = parseInt(req.query.limit) || 10;
+
+    //     if (page <= 0 || limit <= 0) {
+    //       return res.status(400).json({ message: "Invalid page or limit" });
+    //     }
+
+    //     const skip = (page - 1) * limit;
+    //     const result = await articleCollection
+    //       .find()
+    //       .skip(skip)
+    //       .limit(limit)
+    //       .toArray();
+
+    //     const totalArticles = await articleCollection.countDocuments();
+
+    //     res.send({
+    //       articles: result,
+    //       totalArticles,
+    //     });
+    //   } catch (error) {
+    //     console.error("Error fetching articles:", error);
+    //     res
+    //       .status(500)
+    //       .json({ message: "Internal Server Error", error: error.message });
+    //   }
+    // });
+
+    // update article status to approve admin
+    app.patch("/allArticles/:id", verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -293,8 +271,8 @@ async function run() {
       res.send(result);
     });
 
-    // update article decline reason
-    app.patch("/allArticles/:id/decline", async (req, res) => {
+    // update article decline reason admin
+    app.patch("/allArticles/:id/decline", verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const { reason } = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -308,8 +286,8 @@ async function run() {
       res.send(result);
     });
 
-    // update article to premium
-    app.patch("/allArticles/:id/premium", async (req, res) => {
+    // update article to premium admin
+    app.patch("/allArticles/:id/premium", verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -322,7 +300,7 @@ async function run() {
     });
 
     // delete from all article admin route
-    app.delete("/allArticles/:id", async (req, res) => {
+    app.delete("/allArticles/:id", verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await articleCollection.deleteOne(query);
@@ -379,14 +357,15 @@ async function run() {
       res.send(result);
     });
 
-    //  load all users --- dashboard api
-    app.get("/users", async (req, res) => {
+
+    // load all users for dashboard
+    app.get("/users", verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
     // make user admin --- dashboard api
-    app.patch("/users/admin/:id", async (req, res) => {
+    app.patch("/users/admin/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
@@ -398,15 +377,15 @@ async function run() {
       res.send(result);
     });
 
-    // delete user from database
-    app.delete("/users/:id", async (req, res) => {
+    // delete user from database(dash all users page)
+    app.delete("/users/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.deleteOne(query);
       res.send(result);
     });
 
-    // user statistics
+    // user statistics(home page)
     app.get("/user-stats", async (req, res) => {
       try {
         const totalUsers = await userCollection.countDocuments();
@@ -425,7 +404,7 @@ async function run() {
       }
     });
 
-    // subscription api
+    // check premium user and set premium user
     app.put("/premiumUser/:email", async (req, res) => {
       const { selectedDuration } = req.body; // Updated variable name
       const email = req.params.email;
@@ -449,7 +428,7 @@ async function run() {
       res.send(result);
     });
 
-    // check a user is premium
+    // check a user is premium 
     app.get("/checkPremium/:email", async (req, res) => {
       const email = req.params.email;
       const user = await userCollection.findOne({ email });
