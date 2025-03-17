@@ -7,7 +7,17 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5174",
+      "http://localhost:5173",
+      "https://the-news-hub-5f6bb.web.app",
+      "https://the-news-hub-5f6bb.firebaseapp.com/",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.sucjx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -106,7 +116,7 @@ async function run() {
     });
 
     // add articles to db
-    app.post("/articles", async (req, res) => {
+    app.post("/articles", verifyToken, async (req, res) => {
       const article = req.body;
 
       const user = await userCollection.findOne({ email: article.authorEmail });
@@ -222,10 +232,17 @@ async function run() {
     });
 
     app.get("/allArticles/admin", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await articleCollection.find().toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      console.log(page,size);
+      const result = await articleCollection.find().skip(page*size).limit(size).toArray();
       res.send(result);
-      console.log(result);
     });
+
+    app.get ('/articleCount',async(req,res)=>{
+      const count = await articleCollection.estimatedDocumentCount()
+      res.send({count})
+    })
 
     // GET ALL article pagination admin route - todo 
     // app.get("/allArticles/admin", verifyToken, verifyAdmin, async (req, res) => {
